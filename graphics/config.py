@@ -845,6 +845,70 @@ DiagSpaceConfig = {
         'diagNames': pconf.absDiagnostics | pconf.absSigmaDiagnostics | pconf.nobcDiagnostics,
         'channels': range(1,16),
     },
+#aerosols
+    #'pm25': {
+    #    'DiagSpaceGrp': sfc_s,
+    #    'process': True,
+    #    'anGrp': convGrp,
+    #    'binVarConfigs': surfBinVars,
+    #    'diagNames': pconf.absDiagnostics | pconf.rltvDiagnostics,
+    #},
+    'oci_uaa_pace_aod': {                      # match your actual ObsSpace name
+        'DiagSpaceGrp': sfc_s,
+        'process': True,
+        'anGrp': convGrp,
+        'binVarConfigs': surfBinVars,
+        'diagNames': pconf.absDiagnostics | pconf.rltvDiagnostics,
+        'channels': [2,4,6,8],              # optional: wavelength index for obs-loc plots
+    },
+    'spexone_remotap_pace_aod': {                      # match your actual ObsSpace name
+        'DiagSpaceGrp': sfc_s,
+        'process': True,
+        'anGrp': convGrp,
+        'binVarConfigs': surfBinVars,
+        'diagNames': pconf.absDiagnostics | pconf.rltvDiagnostics,
+        'channels': [4,8,14],              # optional: wavelength index for obs-loc plots
+    },
+    'spexone_fmapol_pace_aod': {                      # match your actual ObsSpace name
+        'DiagSpaceGrp': sfc_s,
+        'process': True,
+        'anGrp': convGrp,
+        'binVarConfigs': surfBinVars,
+        'diagNames': pconf.absDiagnostics | pconf.rltvDiagnostics,
+        'channels': [7,22,32],              # optional: wavelength index for obs-loc plots
+    },
+    'harp2_fmapol_pace_aod': {                      # match your actual ObsSpace name
+        'DiagSpaceGrp': sfc_s,
+        'process': True,
+        'anGrp': convGrp,
+        'binVarConfigs': surfBinVars,
+        'diagNames': pconf.absDiagnostics | pconf.rltvDiagnostics,
+        'channels': [1,2,3,4],              # optional: wavelength index for obs-loc plots
+    },
+    'modis_aqua_aod': {                      # match your actual ObsSpace name
+        'DiagSpaceGrp': sfc_s,
+        'process': True,
+        'anGrp': convGrp,
+        'binVarConfigs': surfBinVars,
+        'diagNames': pconf.absDiagnostics | pconf.rltvDiagnostics,
+        'channels': [4],              # optional: wavelength index for obs-loc plots
+    },
+    'viirs_aod_db_npp': {                      # match your actual ObsSpace name
+        'DiagSpaceGrp': sfc_s,
+        'process': True,
+        'anGrp': convGrp,
+        'binVarConfigs': surfBinVars,
+        'diagNames': pconf.absDiagnostics | pconf.rltvDiagnostics,
+        'channels': [4],              # optional: wavelength index for obs-loc plots
+    },
+    'aeronet_l15_aod': {                      # match your actual ObsSpace name
+        'DiagSpaceGrp': sfc_s,
+        'process': True,
+        'anGrp': convGrp,
+        'binVarConfigs': surfBinVars,
+        'diagNames': pconf.absDiagnostics | pconf.rltvDiagnostics,
+        'channels': [1,2,3,4,5,6,7,8],              # optional: wavelength index for obs-loc plots
+    },
 #models
    'mpas': {
         'DiagSpaceGrp': model_s,
