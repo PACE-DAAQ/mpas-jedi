@@ -455,8 +455,8 @@ for binVar, config in binLims1D.items():
 goodFlags = [0]
 goodFlagNames = ['pass']
 #Note: uncomment the following to also plot passive flagged data
-#goodFlags += [1]
-#goodFlagNames += ['passive']
+goodFlags += [1]
+goodFlagNames += ['passive']
 
 
 badFlags = [10, 11, 12, 13,

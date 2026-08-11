@@ -26,7 +26,7 @@ class MultipleBinnedStatistics():
         for attribName in su.fileStatAttributes:
             self.values[attribName] = np.empty(nrows, np.chararray)
         for statName in su.allFileStats:
-            self.values[statName] = np.empty(nrows, np.float)
+            self.values[statName] = np.empty(nrows, np.float64)
 
     @classmethod
     def read(cls, statsFile, expName, fcTDelta, cyDTime):
@@ -455,10 +455,20 @@ class DFWrapper:
         return Loc
 
     def locdf(self, Loc, var=None):
-        if var is None:
-            return self.df.loc[Loc, :]
-        else:
-            return self.df.loc[Loc, var]
+        # A requested index combination may be entirely absent from the frame
+        # (e.g. a passive channel with no 'good'-QC obs).  pandas raises KeyError
+        # (or InvalidIndexError on newer pandas) for such a .loc; treat it as an
+        # empty selection so callers get [] / NaN instead of crashing.
+        try:
+            if var is None:
+                return self.df.loc[Loc, :]
+            else:
+                return self.df.loc[Loc, var]
+        except (KeyError, pd.errors.InvalidIndexError):
+            if var is None:
+                return self.df.iloc[0:0]
+            else:
+                return self.df[var].iloc[0:0]
 
     def levels(self, index, locDict={}):
         newDF = self.locdf(self.locTuple(locDict))

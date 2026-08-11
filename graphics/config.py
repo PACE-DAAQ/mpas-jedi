@@ -860,6 +860,7 @@ DiagSpaceConfig = {
         'binVarConfigs': surfBinVars,
         'diagNames': pconf.absDiagnostics | pconf.rltvDiagnostics,
         'channels': [2,4,6,8],              # optional: wavelength index for obs-loc plots
+        'analyzed channels': [2,4,6],
     },
     'spexone_remotap_pace_aod': {                      # match your actual ObsSpace name
         'DiagSpaceGrp': sfc_s,

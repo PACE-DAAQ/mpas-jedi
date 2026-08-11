@@ -132,9 +132,9 @@ class BinValAxisStatsComposite(AnalysisBase):
                           varMapLoc.append((varName, varLabel))
 
                 nsubplots = nVarsLoc
-                nxplots = np.int(np.ceil(np.sqrt(nsubplots)))
+                nxplots = np.int32(np.ceil(np.sqrt(nsubplots)))
                 while nsubplots%nxplots > 0 and nsubplots%nxplots / nxplots <= 0.5: nxplots += 1
-                nyplots = np.int(np.ceil(np.true_divide(nsubplots, nxplots)))
+                nyplots = np.int32(np.ceil(np.true_divide(nsubplots, nxplots)))
 
                 ptLoc = {}
 
