@@ -1,0 +1,109 @@
+# Standalone sanity test for mpasjedi_ens_recenter.x (oops::EnsRecenter<mpas::Traits>).
+#
+# Run from the test working directory (same one the rtpp / ens_mean_variance ctests use):
+#   cd <mpas-bundle>/build/mpas-jedi/test
+#   mpiexec -n 1 ../../bin/mpasjedi_ens_recenter.x testinput/ens_recenter.yaml
+#
+# Uses the 480km ctest data already staged by the rtpp / ens_mean_variance tests:
+#   ensemble members : Data/480km/bg/ensemble/mem01..04/x1.2562.init.2018-04-15_00.00.00.nc
+#   center           : Data/480km/bg/ensemble/mem05/x1.2562.init.2018-04-15_00.00.00.nc
+# (In production the center is the deterministic analysis; a distinct ensemble member
+#  is used here so the center is genuinely separate from the recentered set and shares
+#  the exact same file format / variable set.)
+#
+# Algorithm (oops/src/oops/runs/EnsRecenter.h):
+#   ensmean            = mean over the "ensemble" members
+#   for each member j: out_j = center + (member_j - ensmean)   for "recenter variables"
+#                      out_j = center                          for every other state variable
+#
+# This yaml intentionally lists ONLY the meteorological analysis variables under
+# "recenter variables", so a single run demonstrates both behaviors:
+#   (A) recenter variables  -> spread preserved, ensemble mean of outputs == center
+#   (B) other state variables-> set exactly to center (spread destroyed, all members equal)
+#
+# NOTE ON AEROSOLS: the 480km test data has no GOCART species, so only meteorology is
+# exercised here. In the 60km production case, add the GOCART mass-fraction variables
+# (see config/mpas/variables.csh: StandardAnalysisVariables) to BOTH the state variable
+# list below AND "recenter variables".
+
+# ctest reference comparison (oops TestReference). The reference file testoutput/ens_recenter.ref
+# is a generated artifact: produce it once with a RECALIBRATE run (see test/CMakeLists.txt), then
+# commit it. Until then, ctest ctest_mpasjedi_ens_recenter will fail on a missing reference.
+test:
+  float relative tolerance: 0.00000001
+  integer tolerance: 0
+  reference filename: testoutput/ens_recenter.ref
+  log output filename: testoutput/ens_recenter.run
+  test output filename: testoutput/ens_recenter.run.ref
+
+_member config: &memberConfig
+  date: 2018-04-15T00:00:00Z
+  stream name: background
+  state variables:
+  - air_temperature
+  - water_vapor_mixing_ratio_wrt_moist_air
+  - eastward_wind
+  - northward_wind
+  - air_pressure_at_surface
+  # variables below vary across members and must be carried as state variables so the
+  # internal ensemble mean is correct; they are NOT in "recenter variables", so each
+  # output member takes the center's value for them (check B).
+  - water_vapor_mixing_ratio_wrt_dry_air
+  - air_pressure
+  - dry_air_density
+  - air_potential_temperature
+  - u
+  - pressure_p
+  - skin_temperature_at_surface
+  - smois
+  - snowc
+  - snowh
+  - tslb
+  - eastward_wind_at_10m
+  - northward_wind_at_10m
+  - w
+  - seaice_fraction
+
+geometry:
+  nml_file: ./Data/480km/namelist.atmosphere_2018041500
+  streams_file: ./Data/480km/streams.atmosphere
+  deallocate non-da fields: true
+
+# central state that the ensemble is recentered onto (the deterministic analysis, in production)
+center:
+  <<: *memberConfig
+  filename: Data/480km/bg/ensemble/mem05/x1.2562.init.2018-04-15_00.00.00.nc
+
+# set to true to zero the center; outputs then become pure perturbations (member - ensmean),
+# whose ensemble mean is ~0 for the recenter variables (an alternate self-consistency check).
+zero center: false
+
+# ensemble whose perturbations are transplanted onto the center
+ensemble:
+  members:
+  - <<: *memberConfig
+    filename: Data/480km/bg/ensemble/mem01/x1.2562.init.2018-04-15_00.00.00.nc
+  - <<: *memberConfig
+    filename: Data/480km/bg/ensemble/mem02/x1.2562.init.2018-04-15_00.00.00.nc
+  - <<: *memberConfig
+    filename: Data/480km/bg/ensemble/mem03/x1.2562.init.2018-04-15_00.00.00.nc
+  - <<: *memberConfig
+    filename: Data/480km/bg/ensemble/mem04/x1.2562.init.2018-04-15_00.00.00.nc
+
+# variables whose perturbations are kept (meteorology only, for this data set)
+recenter variables:
+- air_temperature
+- water_vapor_mixing_ratio_wrt_moist_air
+- eastward_wind
+- northward_wind
+- air_pressure_at_surface
+
+# raw ensemble mean (before recentering) written for inspection / diagnostics
+ensemble meanoutput:
+  filename: Data/states/ensemble/ens_recenter.rawmean.$Y-$M-$D_$h.$m.$s.nc
+  stream name: background
+
+# recentered members; %{member}% is substituted with the 1-based member index
+recentered output:
+  filename: Data/states/ensemble/ens_recenter.mem%{member}%.$Y-$M-$D_$h.$m.$s.nc
+  stream name: background
