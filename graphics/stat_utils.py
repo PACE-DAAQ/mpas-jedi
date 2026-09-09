@@ -640,8 +640,11 @@ def bootStrapClusterFunc(X, Y, alpha=0.05,
 
   ## number of "data points" must by > 0
   #  could be aggregated over a time series, space, or any other binning characteristic
+  #  X and Y are paired subgroups, so they must have matching length; if the
+  #  control (Y) is empty or mismatched (e.g. a channel the control experiment
+  #  did not assimilate), a paired CI cannot be formed -> return NaN CIs.
   nClust = len(X)
-  if nClust > 0:
+  if nClust > 0 and len(Y) == nClust:
 
     if type(n_samples) is list:
       nsSamples = n_samples
