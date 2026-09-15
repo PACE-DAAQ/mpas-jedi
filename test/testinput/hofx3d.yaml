@@ -237,8 +237,6 @@ observations:
         <<: *crtmobsopts
         Sensor_ID: iasi_metop-a
         IRVISlandCoeff: IGBP
-#    get values:
-#      tropopause pressure method: wmo
     obs filters:
 #  Cloud Detection Check
     - filter: Bounds Check
@@ -342,3 +340,7 @@ observations:
       variables:
       - name: windEastward
       - name: windNorthward
+  #get values:
+  #  variable change:
+  #    variable change name: Model2GeoVars
+  #    tropopause pressure method: wmo
