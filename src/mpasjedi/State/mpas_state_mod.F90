@@ -45,6 +45,30 @@ private
 
 public :: add_incr, analytic_IC
 
+   character(len=128), parameter :: aerosolPositiveFields(20) = &
+      [character(len=128) :: &
+       'mass_fraction_of_dust001_in_air', &
+       'mass_fraction_of_dust002_in_air', &
+       'mass_fraction_of_dust003_in_air', &
+       'mass_fraction_of_dust004_in_air', &
+       'mass_fraction_of_dust005_in_air', &
+       'mass_fraction_of_hydrophilic_black_carbon_in_air', &
+       'mass_fraction_of_hydrophilic_brown_carbon_in_air', &
+       'mass_fraction_of_hydrophilic_organic_carbon_in_air', &
+       'mass_fraction_of_hydrophobic_black_carbon_in_air', &
+       'mass_fraction_of_hydrophobic_brown_carbon_in_air', &
+       'mass_fraction_of_hydrophobic_organic_carbon_in_air', &
+       'mass_fraction_of_nitrate001_in_air', &
+       'mass_fraction_of_nitrate002_in_air', &
+       'mass_fraction_of_nitrate003_in_air', &
+       'mass_fraction_of_sea_salt001_in_air', &
+       'mass_fraction_of_sea_salt002_in_air', &
+       'mass_fraction_of_sea_salt003_in_air', &
+       'mass_fraction_of_sea_salt004_in_air', &
+       'mass_fraction_of_sea_salt005_in_air', &
+       'mass_fraction_of_sulfate_in_air' ]
+
+
 ! ------------------------------------------------------------------------------
 
 contains
@@ -159,6 +183,8 @@ subroutine add_incr(self, increment)
       ! note: nonlinear change of variable
       call da_posdef( self%subFields, mpas_hydrometeor_fields)
       call da_posdef( self%subFields, moistureFields)
+      ! Apply the existing post-increment zero floor to aerosol mass fractions.
+      call da_posdef( self%subFields, aerosolPositiveFields)
 
 
       ! Update qv (water vapor mixing ratio) from spechum (specific humidity) [ w = q / (1 - q) ]
