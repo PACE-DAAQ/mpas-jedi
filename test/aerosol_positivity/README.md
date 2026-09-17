@@ -4,9 +4,9 @@
 
 For a controlled single-outer-loop analysis replay using identical input files, run:
 
-```sh
-python3 test/aerosol_positivity/check_analysis.py original_analysis.nc clipped_analysis.nc
-```
+    python3 test/aerosol_positivity/check_analysis.py original_analysis.nc clipped_analysis.nc
+
+The check script requires Python 3 with `numpy` and `netCDF4` installed.
 
 The check requires all 20 configured aerosols to equal `max(0, reference)` exactly and all other compared fields to remain unchanged. It rejects missing aerosol fields, masked aerosol values, nonfinite aerosols, changed field sets, and unexpected changes in other fields. Use `--allow-reference-extras` only when the reference has additional workflow-appended carryover fields. Their names are explicitly reported as not compared; extra fields in the replay remain an error. This is an integration check using user-provided model files, not a self-contained CTest fixture. Multiple outer loops can change subsequent trajectories and need a different comparison.
 
