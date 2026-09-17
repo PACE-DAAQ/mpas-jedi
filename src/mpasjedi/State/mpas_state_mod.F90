@@ -45,8 +45,8 @@ private
 
 public :: add_incr, analytic_IC
 
-   character(len=128), parameter :: aerosolPositiveFields(20) = &
-      [character(len=128) :: &
+   character(len=MAXVARLEN), parameter :: aerosolPositiveFields(20) = &
+      [character(len=MAXVARLEN) :: &
        'mass_fraction_of_dust001_in_air', &
        'mass_fraction_of_dust002_in_air', &
        'mass_fraction_of_dust003_in_air', &
