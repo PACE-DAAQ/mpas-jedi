@@ -56,27 +56,24 @@ class MultipleBinnedStatistics():
         return new
 
     def insert(self, other, srow):
-        assert srow >= 0, ("Error: can only insert MultipleBinnedStatistics rows >= 0, not ", srow)
+        assert srow >= 0, f"Error: can only insert MultipleBinnedStatistics rows >= 0, not {srow}"
         erow = srow + other.nrows - 1
-        assert erow < self.nrows, ("Error: can only insert MultipleBinnedStatistics rows < ", self.nrows, ", not ", erow)
+        assert erow < self.nrows, f"Error: can only insert MultipleBinnedStatistics rows < {self.nrows}, not {erow}"
+
         for key, val in other.values.items():
-            if isinstance(val, Iterable):
-                assert key in self.values, key+" not in MultipleBinnedStatistics"
-                self.values[key][srow:erow+1] = val[:]
+            assert key in self.values, f"{key} not in MultipleBinnedStatistics"
+            self.values[key][srow:erow+1] = val
 
     def destroy(self):
         del self.values
 
 
-def dfIndexLevels(df, index):
-    mi = df.index.names
-    return pu.uniqueMembers(
-               df.index.get_level_values(
-                   mi.index(index) ).tolist() )
+def dfIndexLevels(df, index_name):
+    return df.index.get_level_values(index_name).unique().tolist()
 
 
 def dfVarVals(df, loc, var):
-    return pu.uniqueMembers(df.loc[loc, var].tolist())
+    return df.loc[loc, var].unique().tolist()
 
 
 class StatsDB:
@@ -402,15 +399,13 @@ class DFWrapper:
         return self.df.to_string()
 
     @classmethod
-    def fromLoc(cls, other, locDict, var=None):
-        return cls(other.locdf(other.locTuple(locDict), var))
-
-    @classmethod
     def fromAggStats(cls, other, aggovers):
         return cls(other.aggStats(aggovers))
 
     def append(self, otherDF = None):
-        if otherDF is None: return
+        if otherDF is None or otherDF.empty:
+            return
+        self.df = pd.concat([self.df, otherDF], sort=True)
 
         #Add otherDF (DataFrame object) to self.df
         # adds new column names as needed
@@ -474,32 +469,71 @@ class DFWrapper:
         newDF = self.locdf(self.locTuple(locDict))
         return dfIndexLevels(newDF, index)
 
+    @classmethod
+    def fromLoc(cls, other, locDict, var=None):
+        return cls(other.loc(locDict, var))
+
     def loc(self, locDict, var=None):
-        return self.locdf(self.locTuple(locDict), var)
+        # 1. Start with a boolean mask where everything is True
+        mask = np.ones(len(self.df), dtype=bool)
+
+        # 2. Filter down level by level natively
+        for level_name, val in locDict.items():
+            if val is None:
+                continue
+
+            # Get the actual data for this index level
+            level_vals = self.df.index.get_level_values(level_name)
+
+            # If the filter is a list of items, use native .isin()
+            if isinstance(val, (list, tuple, set, np.ndarray)):
+                mask = mask & level_vals.isin(val)
+
+            # If it is a single value, use standard equality
+            else:
+                level_mask = (level_vals == val)
+
+                # If no match is found, and we searched for a string (like '-0.25'),
+                # check if Pandas stored it as a float in the index.
+                if not level_mask.any() and isinstance(val, str):
+                    try:
+                        level_mask = (level_vals == float(val))
+                    except ValueError:
+                        pass # It was a real string, not a number
+
+                mask = mask & level_mask
+
+        # 3. Apply the mask
+        filtered_df = self.df.loc[mask]
+
+        # 4. Return specific column(s) if requested
+        if var is not None:
+            return filtered_df[var]
+
+        return filtered_df
+
+    def levels(self, index, locDict={}):
+        newDF = self.loc(locDict)
+        return dfIndexLevels(newDF, index)
 
     def loc1(self, locDict, var=None):
-        s = self.loc(locDict, var).to_numpy()
-        if isinstance(s, Iterable):
-          if len(s) == 1:
-            return s[0]
-          else:
-            return np.NaN
-          #assert len(s) == 1, "DFWrapper::loc0, locDict/var must return single location only"
-          #return s[0]
-        else:
-          return s
+        res = self.loc(locDict, var)
+        # if result is empty or has multiple values, return NaN
+        if len(res) != 1:
+            return np.nan
+        return res.item()
 
     def var(self, var):
-        return self.loc({}, var=var)
+        return self.df[var]
 
     def uniquevals(self, var, locDict={}):
-        return pu.uniqueMembers(self.loc(locDict, var).tolist())
+        return self.loc(locDict, var).dropna().unique().tolist()
 
     def min(self, locDict, var=None):
-       return self.loc(locDict, var).dropna().min()
+       return self.loc(locDict, var).min()
 
     def max(self, locDict, var):
-        return self.loc(locDict, var).dropna().max()
+        return self.loc(locDict, var).max()
 
     def aggStats(self, aggovers):
         groupby = deepcopy(self.indexNames)
@@ -512,42 +546,28 @@ class DFWrapper:
 
 
 def TDelta_dir(tdelta, fmt):
-    subs = {}
-    fmts = {}
-    i = '{:d}'
-    i02 = '{:02d}'
+    """Formats a timedelta into a directory string using a replacement map."""
+    # Pre-calculate all necessary values
+    total_seconds = int(tdelta.total_seconds())
+    h_rem, rem = divmod(tdelta.seconds, 3600)
+    m_rem, s_rem = divmod(rem, 60)
 
-    # "%D %HH:%MM:%SS"
-    subs["D"] = tdelta.days
-    fmts["D"] = i
+    # Define the mapping (Key: Formatted Value)
+    subs = {
+        "%D":   str(tdelta.days),
+        "%HH":  f"{h_rem:02d}",
+        "%MM":  f"{m_rem:02d}",
+        "%SS":  f"{s_rem:02d}",
+        "%h":   str(total_seconds // 3600),
+        "%MIN": str(total_seconds // 60),
+        "%SEC": f"{s_rem:02d}",
+        "%m":   str(total_seconds // 60),
+        "%s":   str(total_seconds)
+    }
 
-    subs["HH"], hrem = divmod(tdelta.seconds, 3600)
-    fmts["HH"] = i02
+    # Direct replacement loop
+    for key, val in subs.items():
+        if key in fmt:
+            fmt = fmt.replace(key, val)
 
-    subs["MM"], subs["SS"] = divmod(hrem, 60)
-    fmts["MM"] = i02
-    fmts["SS"] = i02
-
-    ts = int(tdelta.total_seconds())
-
-    # "%h"
-    subs["h"], hrem = divmod(ts, 3600)
-    fmts["h"] = i
-
-    # "%MIN:%SEC"
-    subs["MIN"], subs["SEC"] = divmod(ts, 60)
-    fmts["MIN"] = i
-    fmts["SEC"] = i02
-
-    subs["m"] = subs["MIN"]
-    fmts["m"] = fmts["MIN"]
-
-    # "%s"
-    subs["s"] = ts
-    fmts["s"] = i
-
-    out = fmt
-    for key in subs.keys():
-        out = out.replace("%"+key, fmts[key].format(subs[key]))
-
-    return out
+    return fmt

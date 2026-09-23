@@ -1,31 +1,39 @@
 #!/usr/bin/env python3
 
-import cartopy.crs as ccrs
-from cartopy.mpl.ticker import (LongitudeFormatter, LatitudeFormatter,
-                                LatitudeLocator, LongitudeLocator)
-from collections.abc import Iterable
-from copy import deepcopy, copy
 import datetime as dt
 import logging
+from collections.abc import Iterable
+from copy import copy, deepcopy
+
+import cartopy.crs as ccrs
+from cartopy.mpl.ticker import (
+    LatitudeFormatter,
+    LatitudeLocator,
+    LongitudeFormatter,
+    LongitudeLocator,
+)
 from pandas.plotting import register_matplotlib_converters
+
 register_matplotlib_converters()
 import matplotlib as mpl
+
 mpl.use('AGG')
+import os
+
 import matplotlib.axes as maxes
 import matplotlib.cm as cm
-import matplotlib.colors as mcolors
 import matplotlib.collections as mcollections
+import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import matplotlib.transforms as mtransforms
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 import plot_styles as pstyle
 import plot_utils as pu
 import var_utils as vu
-import os
-
 
 mpl.rcParams['mathtext.fontset'] = 'cm'
 mpl.rcParams['mathtext.rm'] = 'serif'
@@ -36,12 +44,12 @@ _logger = logging.getLogger(__name__)
 ## color maps
 
 # IR brightness temperature color map
-cmGray     = plt.cm.get_cmap("gist_gray")
-cmRainbow  = plt.cm.get_cmap("gist_rainbow")
-cmSpectral = plt.cm.get_cmap("nipy_spectral")
-cmHeat     = plt.cm.get_cmap("gist_heat")
-cmOcean    = plt.cm.get_cmap("ocean")
-cmNCAR     = plt.cm.get_cmap("gist_ncar")
+cmGray     = plt.colormaps["gist_gray"]
+cmRainbow  = plt.colormaps["gist_rainbow"]
+cmSpectral = plt.colormaps["nipy_spectral"]
+cmHeat     = plt.colormaps["gist_heat"]
+cmOcean    = plt.colormaps["ocean"]
+cmNCAR     = plt.colormaps["gist_ncar"]
 
 WhiteBlack1 = cmGray(np.linspace(1.0,0.0,17)) # white to black (-90 to -74 C)
 BlackRed    = cmHeat(np.linspace(0.0,0.5,10)) #black to red (-74 to -65 C)
@@ -169,8 +177,7 @@ def plotDistri(lats,lons,values,
 
         # option 2: pixel contours
         # first sort by longitude to avoid bug for cyclic projections in basemap
-        lonsPlot = lons[finite]
-        lonsPlot[lonsPlot > 180.0] -= 360.0 # fixes latitude swap bug for cyclic projections
+        lonsPlot = (lons[finite] + 180.0) % 360.0 - 180.0 # fixes cyclic wrap and maps 180.0 -> -180.0
         latsPlot = lats[finite]
         valuesPlot = values[finite]
         lonSort = np.argsort(lonsPlot)
@@ -185,11 +192,23 @@ def plotDistri(lats,lons,values,
 
     else:
         npts = finite.sum()
-        s=kwargs.pop('s', calculate_dot_size(finite.sum()))
-        print(f"{ObsType} {VarName} npts={npts} s={s}")
-        p=ax.scatter(lons[finite], lats[finite], c=values[finite],
-                     transform = ccrs.PlateCarree(), s=s, cmap=cmap, **kwargs)
-        ax.gridlines(draw_labels=True, xlocs=np.arange(-180,180,60),linestyle='--')
+        s = kwargs.pop("s", calculate_dot_size(npts))
+        extent = kwargs.pop("extent", None)
+        print(
+            f"{ObsType} {VarName} npts={npts} s={s} extent={extent} {kwargs}"
+        )
+        p = ax.scatter(
+            lons[finite],
+            lats[finite],
+            c=values[finite],
+            transform=ccrs.PlateCarree(),
+            s=s,
+            cmap=cmap,
+            **kwargs,
+        )
+        if extent is not None:
+            ax.set_extent(extent, crs=ccrs.PlateCarree())
+        ax.gridlines(draw_labels=True, xlocs=np.arange(-180, 180, 60), linestyle="--")
 
     ax.coastlines()
 
@@ -225,6 +244,20 @@ def plotDistri(lats,lons,values,
     ofile = f'distri_{VarName}_{out_name}_{levbin}.png'
     plt.savefig(ofile,dpi=200,bbox_inches='tight')
     print(ofile)
+
+    # save figure data as yaml
+    figureData = {
+        'ObsType': str(ObsType),
+        'VarName': str(VarName),
+        'varUnit': str(var_unit),
+        'lats': pu.dataYAMLFmtArray(lats[finite]),
+        'lons': pu.dataYAMLFmtArray(lons[finite]),
+        'values': pu.dataYAMLFmtArray(values[finite]),
+    }
+    figureYAML = pu.yaml_dump_figure_data(figureData)
+    with open(ofile.replace('.png', '.yaml'), 'w') as file:
+        file.write(figureYAML)
+
     plt.close()
 
 
@@ -258,9 +291,8 @@ def scatterMapFields(
     while np.min(lonVals_360) < 0.0:
         lonVals_360[lonVals_360 < 0.0] += 360.0
 
-    # -180 < longitude <= 180
-    lonVals_180[name] = deepcopy(lonVals_360)
-    lonVals_180[name][lonVals_180[name] > 180.0] -= 360.0
+    # -180 <= longitude < 180 (maps 180.0 -> -180.0)
+    lonVals_180[name] = (lonVals_360 + 180.0) % 360.0 - 180.0
 
     for lon in [lonVals_360, lonVals_180[name]]:
       if np.max(lon) - np.min(lon) <= 180.0:
@@ -565,7 +597,7 @@ def plotSeries(fig,
                sciTicks=False, logScale= False, centralValue=None,
                ny=1, nx=1, nplots=1, iplot=0,
                linesValsMinCI=None, linesValsMaxCI=None,
-               dmin=np.NaN, dmax=np.NaN,
+               dmin=np.nan, dmax=np.nan,
                lineAttribOffset=0,
                legend_inside=True,
                interiorLabels=True):
@@ -613,15 +645,13 @@ def plotSeries(fig,
         if np.all(np.isnan(lineVals)):
             global nanWarnSer
             if nanWarnSer==0:
-                _logger.warning("skipping all-NaN data")
-                _logger.warning(title+"; "+dataLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping all-NaN data: {title}; {dataLabel}; {linesLabel[iline]}")
             nanWarnSer=nanWarnSer+1
             continue
         if len(lineVals)!=len(xVals):
             global lenWarnSer
             if lenWarnSer==0:
-                _logger.warning("skipping data where len(x)!=len(y)")
-                _logger.warning(title+"; "+dataLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping data where len(x)!=len(y): {title}; {dataLabel}; {linesLabel[iline]}")
             lenWarnSer=lenWarnSer+1
             continue
 
@@ -660,7 +690,7 @@ def plotSeries(fig,
               # test statistical significance versus centralValue
               if centralValue is None:
                   isSignificant = np.empty(len(lineVals))
-                  isSignificant[:] = np.NaN
+                  isSignificant[:] = np.nan
                   centralValue_ = 0.0
               else:
                   isSignificant = np.multiply(np.subtract(linesValsMinCI[iline], centralValue),
@@ -844,7 +874,7 @@ def plotProfile(fig,
                 sciTicks=False, logScale=False, centralValue=None,
                 ny=1, nx=1, nplots=1, iplot=0,
                 linesValsMinCI=None, linesValsMaxCI=None,
-                dmin=np.NaN, dmax=np.NaN,
+                dmin=np.nan, dmax=np.nan,
                 lineAttribOffset=0,
                 legend_inside=True,
                 interiorLabels=True,
@@ -893,15 +923,13 @@ def plotProfile(fig,
         if np.all(np.isnan(lineVals)):
             global nanWarnProf
             if nanWarnProf==0:
-                _logger.warning("skipping all-NaN data")
-                _logger.warning(title+"; "+dataLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping all-NaN data: {title}; {dataLabel}; {linesLabel[iline]}")
             nanWarnProf=nanWarnProf+1
             continue
         if len(lineVals)!=len(yVals):
             global lenWarnProf
             if lenWarnProf==0:
-                _logger.warning("skipping data where len(x)!=len(y)")
-                _logger.warning(title+"; "+dataLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping data where len(x)!=len(y): {title}; {dataLabel}; {linesLabel[iline]}")
             lenWarnProf=lenWarnProf+1
             continue
 
@@ -941,7 +969,7 @@ def plotProfile(fig,
               # test statistical significance versus centralValue
               if centralValue is None:
                   isSignificant = np.empty(len(lineVals))
-                  isSignificant[:] = np.NaN
+                  isSignificant[:] = np.nan
                   centralValue_ = 0.0
               else:
                   isSignificant = np.multiply(np.subtract(linesValsMinCI[iline], centralValue),
@@ -1127,7 +1155,7 @@ def plotTimeSeries(fig,
                    sciTicks=False, logScale = False, centralValue=None,
                    ny=1, nx=1, nplots=1, iplot=0,
                    linesValsMinCI=None, linesValsMaxCI=None,
-                   dmin=np.NaN, dmax=np.NaN,
+                   dmin=np.nan, dmax=np.nan,
                    lineAttribOffset=0,
                    legend_inside=True,
                    interiorLabels=True):
@@ -1174,8 +1202,7 @@ def plotTimeSeries(fig,
         if np.all(np.isnan(lineVals)):
             global nanWarnTS
             if nanWarnTS==0:
-                _logger.warning("skipping all-NaN data")
-                _logger.warning(title+"; "+dataLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping all-NaN data: {title}; {dataLabel}; {linesLabel[iline]}")
             nanWarnTS=nanWarnTS+1
             continue
 
@@ -1188,8 +1215,7 @@ def plotTimeSeries(fig,
         if len(lineVals)!=len(xVals):
             global lenWarnTS
             if lenWarnTS==0:
-                _logger.warning("skipping data where len(x)!=len(y)")
-                _logger.warning(title+"; "+dataLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping data where len(x)!=len(y): {title}; {dataLabel}; {linesLabel[iline]}")
             lenWarnTS=lenWarnTS+1
             continue
 
@@ -1236,7 +1262,7 @@ def plotTimeSeries(fig,
               # test statistical significance versus centralValue
               if centralValue is None:
                   isSignificant = np.empty(len(lineVals))
-                  isSignificant[:] = np.NaN
+                  isSignificant[:] = np.nan
                   centralValue_ = 0.0
               else:
                   isSignificant = np.multiply(np.subtract(linesValsMinCI[iline], centralValue),
@@ -1407,7 +1433,7 @@ def scoreCard(fig,
            sciTicks=False, logScale=False, centralValue=None,
            ny=1, nx=1, nplots=1, iplot=0,
            contourValsMinCI=None, contourValsMaxCI=None,
-           dmin=np.NaN, dmax=np.NaN,
+           dmin=np.nan, dmax=np.nan,
            interiorLabels=True):
 
 # ARGUMENTS
@@ -1683,7 +1709,7 @@ def plot2D(fig,
            sciTicks=False, logScale=False, centralValue=None,
            ny=1, nx=1, nplots=1, iplot=0,
            contourValsMinCI=None, contourValsMaxCI=None,
-           dmin=np.NaN, dmax=np.NaN,
+           dmin=np.nan, dmax=np.nan,
            interiorLabels=True):
 
 # ARGUMENTS
@@ -1951,7 +1977,8 @@ def map2D(fig,
           sciTicks=False, logScale=False, centralValue=None,
           ny=1, nx=1, nplots=1, iplot=0,
           contourValsMinCI=None, contourValsMaxCI=None,
-          dmin=np.NaN, dmax=np.NaN,
+          dmin=np.nan, dmax=np.nan,
+          extent=None,
           interiorLabels=True):
 
 # ARGUMENTS
@@ -1973,11 +2000,11 @@ def map2D(fig,
 # contourValsMaxCI   - maximum confidence interval bound for contourVals (2d numpy array), optional
 
 # dmin, dmax    - min/max values of contourVals, optional
+# extent        - A 4-item list or tuple specifying the map boundaries in the order [x0, x1, y0, y1]
 # interiorLabels- whether to add titles, axis, and colorbar labels for interior subplots, optional
 
     # setup map
     cLon = None
-
     # Is shortest range of lonVals <= 180 degrees?
     # check two different total longitude ranges on periodic domain
 
@@ -1988,22 +2015,31 @@ def map2D(fig,
     while np.min(lonVals_360) < 0.0:
         lonVals_360[lonVals_360 < 0.0] += 360.0
 
-    # -180 < longitude <= 180
-    lonVals_180 = deepcopy(lonVals_360)
-    lonVals_180[lonVals_180 > 180.0] -= 360.0
+    # -180 <= longitude < 180 (maps 180.0 -> -180.0)
+    lonVals_180 = (lonVals_360 + 180.0) % 360.0 - 180.0
 
     for lon in [lonVals_360, lonVals_180]:
         if np.max(lon) - np.min(lon) <= 180.0:
             cLon = 0.5*(np.max(lon) + np.min(lon))
 
-    if cLon is None:
-        # plot entire Earth
-        ax = fig.add_subplot(ny, nx, iplot+1, projection=ccrs.Mollweide(0.0))
-
+    # extent implies PlateCarree.
+    if extent is not None:
+        cLon = 0.5 * (extent[0] + extent[1])
+        ax = fig.add_subplot(
+            ny, nx, iplot + 1,
+            projection=ccrs.PlateCarree(
+                central_longitude=cLon,
+            )
+        )
     else:
-        # plot single projected side of Earth
-        if cLon > 180.0: cLon-=360.0
-        ax = fig.add_subplot(ny, nx, iplot+1, projection=ccrs.Orthographic(cLon))
+        if cLon is None:
+            # plot entire Earth
+            ax = fig.add_subplot(ny, nx, iplot+1, projection=ccrs.Mollweide(0.0))
+
+        else:
+            # plot single projected side of Earth
+            if cLon > 180.0: cLon-=360.0
+            ax = fig.add_subplot(ny, nx, iplot+1, projection=ccrs.Orthographic(cLon))
 
 
     gl = ax.gridlines(linewidth=0.01, color='gray', alpha=0.5, linestyle='--')
@@ -2014,9 +2050,17 @@ def map2D(fig,
     gl.yformatter = LatitudeFormatter()
     gl.ylabel_style = {'size': 3, 'color': 'black'}
     gl.xlabel_style = {'size': 3, 'color': 'black'}
+    # Pull longitude labels closer to the axis to avoid overlap with the panel below.
+    if hasattr(gl, 'xpadding'):
+        gl.xpadding = 1.0
 
     # only global projections
     if cLon is None:
+        gl.bottom_labels = True
+        gl.xlocator = LongitudeLocator()
+        gl.xformatter = LongitudeFormatter()
+    # extent-based maps use PlateCarree and can support bottom longitude labels
+    elif extent is not None:
         gl.bottom_labels = True
         gl.xlocator = LongitudeLocator()
         gl.xformatter = LongitudeFormatter()
@@ -2103,8 +2147,11 @@ def map2D(fig,
       t = pstyle.subplotLabel(iplot)+' '+title
     ax.set_title(t,fontsize=titleFontSize)
 
-    # show full projection extent
-    ax.set_global()
+    # show full projection extent unless a regional extent is requested
+    if extent is None:
+        ax.set_global()
+    else:
+        ax.set_extent(extent, crs=ccrs.PlateCarree())
 
     # add coastlines
     ax.coastlines(linewidth=coastLineWidth)
@@ -2223,15 +2270,13 @@ def plotPDF(fig,
         if np.all(np.isnan(countVals)) or np.all(countVals == 0):
             global nanWarnPDF
             if nanWarnPDF==0:
-                _logger.warning("skipping all-NaN or all-Zero data")
-                _logger.warning(title+"; "+indepLabel+"; "+countLabels[ihist])
+                _logger.warning(f"skipping all-NaN or all-Zero data: {title}; {indepLabel}; {countLabels[ihist]}")
             nanWarnPDF=nanWarnPDF+1
             continue
         if len(countVals)!=len(xVals):
             global lenWarnPDF
             if lenWarnPDF==0:
-                _logger.warning("skipping data where len(x)!=len(y)")
-                _logger.warning(title+"; "+indepLabel+"; "+countLabels[ihist])
+                _logger.warning(f"skipping data where len(x)!=len(y): {title}; {indepLabel}; {countLabels[ihist]}")
             lenWarnPDF=lenWarnPDF+1
             continue
 
@@ -2363,15 +2408,13 @@ def plotCompositeSeries(fig,
         if np.all(np.isnan(lineVals)):
             global nanWarnRamp
             if nanWarnRamp==0:
-                _logger.warning("skipping all-NaN data")
-                _logger.warning(title+"; "+indepLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping all-NaN data: {title}; {indepLabel}; {linesLabel[iline]}")
             nanWarnRamp=nanWarnRamp+1
             continue
         if len(lineVals)!=len(xVals):
             global lenWarnRamp
             if lenWarnRamp==0:
-                _logger.warning("skipping data where len(x)!=len(y)")
-                _logger.warning(title+"; "+indepLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping data where len(x)!=len(y): {title}; {indepLabel}; {linesLabel[iline]}")
             lenWarnRamp=lenWarnRamp+1
             continue
 
@@ -2497,15 +2540,13 @@ def plotCompositeProfile(fig,
         if np.all(np.isnan(lineVals)):
             global nanWarnRamp
             if nanWarnRamp==0:
-                _logger.warning("skipping all-NaN data")
-                _logger.warning(title+"; "+indepLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping all-NaN data: {title}; {indepLabel}; {linesLabel[iline]}")
             nanWarnRamp=nanWarnRamp+1
             continue
         if len(lineVals)!=len(yVals):
             global lenWarnRamp
             if lenWarnRamp==0:
-                _logger.warning("skipping data where len(x)!=len(y)")
-                _logger.warning(title+"; "+indepLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping data where len(x)!=len(y): {title}; {indepLabel}; {linesLabel[iline]}")
             lenWarnRamp=lenWarnRamp+1
             continue
 
@@ -2629,15 +2670,13 @@ def plotfitRampComposite(fig,
         if np.all(np.isnan(lineVals)):
             global nanWarnRamp
             if nanWarnRamp==0:
-                _logger.warning("skipping all-NaN data")
-                _logger.warning(title+"; "+indepLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping all-NaN data: {title}; {indepLabel}; {linesLabel[iline]}")
             nanWarnRamp=nanWarnRamp+1
             continue
         if len(lineVals)!=len(xVals):
             global lenWarnRamp
             if lenWarnRamp==0:
-                _logger.warning("skipping data where len(x)!=len(y)")
-                _logger.warning(title+"; "+indepLabel+"; "+linesLabel[iline])
+                _logger.warning(f"skipping data where len(x)!=len(y): {title}; {indepLabel}; {linesLabel[iline]}")
             lenWarnRamp=lenWarnRamp+1
             continue
 

@@ -28,14 +28,19 @@ real(kind=kind_real), parameter :: MPAS_JEDI_HALF_kr     = 0.5_kind_real
 real(kind=kind_real), parameter :: MPAS_JEDI_ONE_kr      = 1.0_kind_real
 real(kind=kind_real), parameter :: MPAS_JEDI_TWO_kr      = 2.0_kind_real
 real(kind=kind_real), parameter :: MPAS_JEDI_THREE_kr    = 3.0_kind_real
-real(kind=kind_real), parameter :: MPAS_JEDI_HUNDRED_kr  = 100.0_kind_real
 real(kind=kind_real), parameter :: MPAS_JEDI_THOUSAND_kr = 1000.0_kind_real
 real(kind=kind_real), parameter :: MPAS_JEDI_MILLION_kr  = 1000000.0_kind_real
 
 ! ------------------------------------------------------------------------------
 
-!Geometry
+!Constant from MPAS
 real(kind=kind_real), parameter :: MPAS_JEDI_PII_kr      = real(pii,kind_real)
+real(kind=kind_real), parameter :: MPAS_JEDI_RGAS_kr     = real(rgas,kind_real)
+real(kind=kind_real), parameter :: MPAS_JEDI_RV_kr       = real(rv,kind_real)
+
+! ------------------------------------------------------------------------------
+
+!Geometry
 real(kind=kind_real), parameter :: MPAS_JEDI_PIIo2_kr    = MPAS_JEDI_PII_kr/MPAS_JEDI_TWO_kr
 real(kind=kind_real), parameter :: MPAS_JEDI_DEG2RAD_kr  = MPAS_JEDI_PII_kr/180.0_kind_real
 real(kind=kind_real), parameter :: MPAS_JEDI_RAD2DEG_kr  = 180.0_kind_real/MPAS_JEDI_PII_kr
@@ -54,7 +59,7 @@ real(kind=kind_real), parameter :: MPAS_JEDI_P0_kr  = 100000.0_kind_real
 ! ------------------------------------------------------------------------------
 
 ! For relative humidity conversion
-real(kind=kind_real), parameter :: rd_over_rv  = rgas/rv
+real(kind=kind_real), parameter :: rd_over_rv  = MPAS_JEDI_RGAS_kr/MPAS_JEDI_RV_kr
 real(kind=kind_real), parameter :: rd_over_rv1 = MPAS_JEDI_ONE_kr - rd_over_rv
 real(kind=kind_real), parameter :: t_kelvin    = 273.15_kind_real
 !Saturation Vapour Pressure Constants(Rogers & Yau, 1989)

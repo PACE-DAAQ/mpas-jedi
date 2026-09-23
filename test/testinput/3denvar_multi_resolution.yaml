@@ -1,9 +1,9 @@
 test:
   float relative tolerance: 0.00000001
   integer tolerance: 0
-  reference filename: testoutput/3denvar_2stream_bumploc.ref
-  log output filename: testoutput/3denvar_2stream_bumploc.run
-  test output filename: testoutput/3denvar_2stream_bumploc.run.ref
+  reference filename: testoutput/3denvar_multi_resolution.ref
+  log output filename: testoutput/3denvar_multi_resolution.run
+  test output filename: testoutput/3denvar_multi_resolution.run.ref
 _member config: &memberConfig
   date: &analysisdate '2018-04-15T00:00:00Z'
   state variables: &incvars
@@ -19,8 +19,8 @@ cost function:
     begin: '2018-04-14T21:00:00Z'
     length: PT6H
   geometry:
-    nml_file: "./Data/480km_2stream/namelist.atmosphere_2018041500"
-    streams_file: "./Data/480km_2stream/streams.atmosphere"
+    nml_file: "./Data/384km/namelist.atmosphere_2018041500"
+    streams_file: "./Data/384km/streams.atmosphere"
     deallocate non-da fields: true
   analysis variables: *incvars
   background:
@@ -49,7 +49,7 @@ cost function:
     - smois
     - tslb
     - pressure_p
-    filename: "./Data/480km_2stream/mpasout.2018-04-15_00.00.00.nc"
+    filename: "./Data/384km/bg/mpasout.2018-04-15_00.00.00.nc"
     date: *analysisdate
   background error:
     covariance model: ensemble
@@ -60,20 +60,20 @@ cost function:
         active variables: *incvars
         read:
           io:
-            files prefix: Data/bump/mpas_parametersbump_loc
+            files prefix: Data/bump/mpas_bumploc
           drivers:
             multivariate strategy: duplicated
             read local nicas: true
     members:
-    - filename: Data/480km/bg/ensemble/mem01/x1.2562.init.2018-04-15_00.00.00.nc
+    - filename: Data/480km/bg/ensemble/mem01/EnsForCov.2018-04-15_00.00.00.nc
       <<: *memberConfig
-    - filename: Data/480km/bg/ensemble/mem02/x1.2562.init.2018-04-15_00.00.00.nc
+    - filename: Data/480km/bg/ensemble/mem02/EnsForCov.2018-04-15_00.00.00.nc
       <<: *memberConfig
-    - filename: Data/480km/bg/ensemble/mem03/x1.2562.init.2018-04-15_00.00.00.nc
+    - filename: Data/480km/bg/ensemble/mem03/EnsForCov.2018-04-15_00.00.00.nc
       <<: *memberConfig
-    - filename: Data/480km/bg/ensemble/mem04/x1.2562.init.2018-04-15_00.00.00.nc
+    - filename: Data/480km/bg/ensemble/mem04/EnsForCov.2018-04-15_00.00.00.nc
       <<: *memberConfig
-    - filename: Data/480km/bg/ensemble/mem05/x1.2562.init.2018-04-15_00.00.00.nc
+    - filename: Data/480km/bg/ensemble/mem05/EnsForCov.2018-04-15_00.00.00.nc
       <<: *memberConfig
   observations:
     observers:
@@ -86,7 +86,7 @@ cost function:
         obsdataout:
           engine:
             type: H5File
-            obsfile: Data/os/obsout_3denvar_2stream_bumploc_sondes.nc4
+            obsfile: Data/os/obsout_3denvar_multi_sondes.nc4
         simulated variables: [airTemperature, windEastward, windNorthward, specificHumidity]
       obs operator:
         name: VertInterp
@@ -97,7 +97,7 @@ cost function:
       - filter: PreQC
         maxvalue: 3
       - filter: Background Check
-        apply at iterations: 0,1
+        apply at iterations: 0,1,2
         threshold: 3
     - obs space:
         name: Satwind
@@ -108,7 +108,7 @@ cost function:
         obsdataout:
           engine:
             type: H5File
-            obsfile: Data/os/obsout_3denvar_2stream_bumploc_satwind.nc4
+            obsfile: Data/os/obsout_3denvar_multi_satwind.nc4
         simulated variables: [windEastward, windNorthward]
       obs operator:
         name: VertInterp
@@ -119,7 +119,7 @@ cost function:
       - filter: PreQC
         maxvalue: 3
       - filter: Background Check
-        apply at iterations: 0,1
+        apply at iterations: 0,1,2
         threshold: 3
     - obs space:
         name: GnssroRefNCEP
@@ -130,7 +130,7 @@ cost function:
         obsdataout:
           engine:
             type: H5File
-            obsfile: Data/os/obsout_3denvar_2stream_bumploc_gnssroref.nc4
+            obsfile: Data/os/obsout_3denvar_multi_gnssroref.nc4
         simulated variables: [atmosphericRefractivity]
       obs operator:
         name: GnssroRefNCEP
@@ -154,10 +154,10 @@ cost function:
           minvalue: -200
           maxvalue: 200
       - filter: Background Check
-        apply at iterations: 0,1
+        apply at iterations: 0,1,2
         threshold: 3
       - filter: ROobserror
-        apply at iterations: 0,1
+        apply at iterations: 0,1,2
         variable: refractivity
         errmodel: NCEP
     - obs space:
@@ -169,7 +169,7 @@ cost function:
         obsdataout:
           engine:
             type: H5File
-            obsfile: Data/os/obsout_3denvar_2stream_bumploc_sfc.nc4
+            obsfile: Data/os/obsout_3denvar_multi_sfc.nc4
         simulated variables: [stationPressure]
       obs operator:
         name: SfcCorrected
@@ -183,30 +183,30 @@ cost function:
       - filter: PreQC
         maxvalue: 3
       - filter: Difference Check
-        apply at iterations: 0,1
+        apply at iterations: 0,1,2
         reference: MetaData/stationElevation
         value: GeoVaLs/height_above_mean_sea_level_at_surface
         threshold: 500
       - filter: Background Check
-        apply at iterations: 0,1
+        apply at iterations: 0,1,2
         threshold: 10
 output:
-  filename: "Data/states/mpas.3denvar_2stream.$Y-$M-$D_$h.$m.$s.nc"
+  filename: "Data/states/mpas.3denvar_multires.$Y-$M-$D_$h.$m.$s.nc"
   stream name: analysis
 variational:
   minimizer:
     algorithm: DRPCG
   iterations:
   - geometry:
-      nml_file: "./Data/480km_2stream/namelist.atmosphere_2018041500"
-      streams_file: "./Data/480km_2stream/streams.atmosphere"
+      nml_file: "./Data/480km/namelist.atmosphere_2018041500"
+      streams_file: "./Data/480km/streams.atmosphere"
       deallocate non-da fields: true
     ninner: '10'
     gradient norm reduction: 1e-10
     test: 'on'
   - geometry:
-      nml_file: "./Data/480km_2stream/namelist.atmosphere_2018041500"
-      streams_file: "./Data/480km_2stream/streams.atmosphere"
+      nml_file: "./Data/480km/namelist.atmosphere_2018041500"
+      streams_file: "./Data/480km/streams.atmosphere"
       deallocate non-da fields: true
     ninner: '10'
     gradient norm reduction: 1e-10

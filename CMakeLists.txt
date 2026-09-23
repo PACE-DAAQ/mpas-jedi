@@ -7,7 +7,7 @@
 # MPAS
 ################################################################################
 
-cmake_minimum_required( VERSION 3.12 )
+cmake_minimum_required( VERSION 3.23 )
 project( mpasjedi VERSION 3.1.0 LANGUAGES C CXX Fortran )
 
 ## Ecbuild integration
@@ -94,7 +94,8 @@ if( BUILD_TESTING )
                     TYPE SCRIPT
                     COMMAND ${CMAKE_BINARY_DIR}/bin/cpplint.py
                     ARGS --quiet --recursive ${CMAKE_CURRENT_SOURCE_DIR}/src
-                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+                    LABELS tier2 )
 endif()
 
 ## Package Config
