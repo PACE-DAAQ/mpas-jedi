@@ -93,7 +93,7 @@ contains
                       'qbrphobic', 'qbrphilic', &
                       'qdust1   ', 'qdust2   ', 'qdust3   ', 'qdust4   ', 'qdust5   ', &
                       'qseas1   ', 'qseas2   ', 'qseas3   ', 'qseas4   ', 'qseas5   ', &
-                      'qso4     ', 'qni1     ', 'qni2     ', 'qni3     '/)
+                      'qso4     ', 'qni1     ', 'qni2     ', 'qni3     '/))
       ! field_is_scalar = any(trim(fieldName) == scalar_names)
 
    end function
