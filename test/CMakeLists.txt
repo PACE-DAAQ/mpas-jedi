@@ -95,6 +95,8 @@ list( APPEND mpas_testinput
   testinput/dirac_bumploc.yaml
   testinput/dirac_diffusion_duplicated.yaml
   testinput/dirac_diffusion_univariate.yaml
+  testinput/dirac_multiscale_bump_loc.yaml
+  testinput/dirac_multiscale_diffusion_loc.yaml
   testinput/dirac_noloc.yaml
   testinput/dirac_spectral_loc.yaml
   testinput/eda_3dhybrid.yaml
@@ -123,6 +125,7 @@ list( APPEND mpas_testinput
   testinput/hofx4d_pseudo.yaml
   testinput/increment.yaml
   testinput/letkf_3dloc.yaml
+  testinput/letkf_3dloc_onestep_redist.yaml
   testinput/lgetkf.yaml
   testinput/lgetkf_height_vloc.yaml
   testinput/linvarcha.yaml
@@ -134,6 +137,7 @@ list( APPEND mpas_testinput
   testinput/parameters_bumploc.yaml
   testinput/parameters_bumploc_regional.yaml
   testinput/parameters_diffusion.yaml
+  testinput/process_perts_diffusion.yaml
   testinput/process_perts_spectral.yaml
   testinput/rtpp.yaml
   testinput/ens_mean_variance.yaml
@@ -174,6 +178,8 @@ list( APPEND mpas_testoutput
   testoutput/dirac_bumploc.ref
   testoutput/dirac_diffusion_univariate.ref
   testoutput/dirac_diffusion_duplicated.ref
+  testoutput/dirac_multiscale_diffusion_loc.ref
+  testoutput/dirac_multiscale_bump_loc.ref
   testoutput/dirac_noloc.ref
   testoutput/dirac_spectral_loc.ref
   testoutput/eda_3dhybrid.ref
@@ -187,11 +193,13 @@ list( APPEND mpas_testoutput
   testoutput/hofx4d.ref
   testoutput/hofx4d_pseudo.ref
   testoutput/letkf_3dloc.ref
+  testoutput/letkf_3dloc_onestep_redist.ref
   testoutput/lgetkf.ref
   testoutput/lgetkf_height_vloc.ref
   testoutput/parameters_bumpcov.ref
   testoutput/parameters_bumploc.ref
   testoutput/parameters_bumploc_regional.ref
+  testoutput/process_perts_diffusion.ref
   testoutput/process_perts_spectral.ref
   testoutput/rtpp.ref
   testoutput/ens_mean_variance.ref
@@ -825,6 +833,31 @@ add_mpasjedi_application_test(
     APPLICATION error_covariance_toolbox
     ${RECALIBRATE})
 
+## process perts and dirac
+#  =======================
+
+#bump
+add_mpasjedi_application_test(
+    NAME dirac_multiscale_bump_loc
+    APPLICATION error_covariance_toolbox
+    LABELS multiscale
+    ${RECALIBRATE})
+
+#diffusion
+add_mpasjedi_application_test(
+    NAME process_perts_diffusion
+    APPLICATION process_perts
+	DEPENDS parameters_diffusion
+    LABELS multiscale
+    ${RECALIBRATE})
+
+add_mpasjedi_application_test(
+    NAME dirac_multiscale_diffusion_loc
+    APPLICATION error_covariance_toolbox
+    DEPENDS process_perts_diffusion
+    LABELS multiscale
+    ${RECALIBRATE})
+
 #spectral
 if( atlas_TRANS_FOUND OR atlas_ECTRANS_FOUND )
     add_mpasjedi_application_test(
@@ -1024,6 +1057,12 @@ add_mpasjedi_application_test(
 # enkf (4 and 8 pe)
 add_mpasjedi_application_test(
     NAME letkf_3dloc
+    NPE 4
+    APPLICATION enkf
+    ${RECALIBRATE})
+
+add_mpasjedi_application_test(
+    NAME letkf_3dloc_onestep_redist
     NPE 4
     APPLICATION enkf
     ${RECALIBRATE})
