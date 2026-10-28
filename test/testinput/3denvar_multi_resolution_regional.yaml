@@ -1,0 +1,172 @@
+test:
+  float relative tolerance: 0.00000001
+  integer tolerance: 0
+  reference filename: testoutput/3denvar_multi_resolution_regional.ref
+  log output filename: testoutput/3denvar_multi_resolution_regional.run
+  test output filename: testoutput/3denvar_multi_resolution_regional.run.ref
+_member config: &memberConfig
+  date: &analysisdate '2018-04-15T00:00:00Z'
+  state variables: &incvars
+  - air_temperature
+  - water_vapor_mixing_ratio_wrt_moist_air
+  - eastward_wind
+  - northward_wind
+  - air_pressure_at_surface
+  stream name: ensemble
+cost function:
+  cost type: 3D-Var
+  time window:
+    begin: '2018-04-14T21:00:00Z'
+    length: PT6H
+  geometry:
+    nml_file: "./Data/384km/namelist.atmosphere_2018041500_regional"
+    streams_file: "./Data/384km/streams.atmosphere_regional"
+    deallocate non-da fields: true
+    regional nn fill distance in km: 500.0 #default
+  analysis variables: *incvars
+  background:
+    state variables:
+    - air_temperature
+    - water_vapor_mixing_ratio_wrt_moist_air
+    - eastward_wind
+    - northward_wind
+    - air_pressure_at_surface
+    - air_potential_temperature
+    - dry_air_density
+    - u
+    - water_vapor_mixing_ratio_wrt_dry_air
+    - air_pressure
+    - landmask
+    - seaice_fraction
+    - snowc
+    - skin_temperature_at_surface
+    - ivgtyp
+    - isltyp
+    - snowh
+    - vegetation_area_fraction
+    - eastward_wind_at_10m
+    - northward_wind_at_10m
+    - lai
+    - smois
+    - tslb
+    - pressure_p
+    filename: "./Data/384km/bg/conus384km.mpasout.2018-04-15_00.00.00.nc"
+    date: *analysisdate
+  background error:
+    covariance model: ensemble
+    localization:
+      localization method: SABER
+      saber central block:
+        saber block name: BUMP_NICAS
+        active variables: *incvars
+        read:
+          io:
+            files prefix: Data/bump/mpas_bumploc_regional
+          drivers:
+            multivariate strategy: duplicated
+            read local nicas: true
+    members:
+    - filename: Data/480km/bg/ensemble/mem01/conus480km.EnsForCov.2018-04-15_00.00.00.nc
+      <<: *memberConfig
+    - filename: Data/480km/bg/ensemble/mem02/conus480km.EnsForCov.2018-04-15_00.00.00.nc
+      <<: *memberConfig
+    - filename: Data/480km/bg/ensemble/mem03/conus480km.EnsForCov.2018-04-15_00.00.00.nc
+      <<: *memberConfig
+    - filename: Data/480km/bg/ensemble/mem04/conus480km.EnsForCov.2018-04-15_00.00.00.nc
+      <<: *memberConfig
+    - filename: Data/480km/bg/ensemble/mem05/conus480km.EnsForCov.2018-04-15_00.00.00.nc
+      <<: *memberConfig
+  observations:
+    observers:
+    - obs space:
+        name: Radiosonde
+        obsdatain:
+          engine:
+            type: H5File
+            obsfile: Data/ufo/testinput_tier_1/sondes_obs_2018041500_m.nc4
+        obsdataout:
+          engine:
+            type: H5File
+            obsfile: Data/os/obsout_3denvar_multi_regional_sondes.nc4
+        simulated variables: [airTemperature, windEastward, windNorthward, specificHumidity]
+      obs operator:
+        name: VertInterp
+        observation alias file: testinput/obsop_name_map.yaml
+      obs error:
+        covariance model: diagonal
+      obs filters:
+      - filter: Bounds Check
+        filter variables:
+        - name: airTemperature
+        - name: windEastward
+        - name: windNorthward
+        - name: specificHumidity
+        test variables:
+        - name:  GeoVaLs/observable_domain_mask
+          minvalue: 0.0
+          maxvalue: 1.0
+        apply at iterations: 0,1
+      - filter: PreQC
+        maxvalue: 3
+      - filter: Background Check
+        apply at iterations: 0,1
+        threshold: 3
+    - obs space:
+        name: SfcCorrected
+        obsdatain:
+          engine:
+            type: H5File
+            obsfile: Data/ufo/testinput_tier_1/sfc_obs_2018041500_m.nc4
+        obsdataout:
+          engine:
+            type: H5File
+            obsfile: Data/os/obsout_3denvar_multi_regional_sfc.nc4
+        simulated variables: [stationPressure]
+      obs operator:
+        name: SfcCorrected
+        correction scheme to use: UKMO   # or WRFDA
+      linear obs operator:
+        name: Identity
+        observation alias file: testinput/obsop_name_map.yaml
+      obs error:
+        covariance model: diagonal
+      obs filters:
+      - filter: Bounds Check
+        filter variables:
+        - name: stationPressure
+        test variables:
+        - name:  GeoVaLs/observable_domain_mask
+          minvalue: 0.0
+          maxvalue: 1.0
+        apply at iterations: 0,1
+      - filter: PreQC
+        maxvalue: 3
+      - filter: Difference Check
+        apply at iterations: 0,1
+        reference: MetaData/stationElevation
+        value: GeoVaLs/height_above_mean_sea_level_at_surface
+        threshold: 500
+      - filter: Background Check
+        apply at iterations: 0,1
+        threshold: 10
+output:
+  filename: "Data/states/mpas.3denvar_multires_regional.$Y-$M-$D_$h.$m.$s.nc"
+  stream name: analysis
+variational:
+  minimizer:
+    algorithm: DRPCG
+  iterations:
+  - geometry:
+      nml_file: "./Data/480km/namelist.atmosphere_2018041500_regional"
+      streams_file: "./Data/480km/streams.atmosphere_regional"
+      deallocate non-da fields: true
+    ninner: '10'
+    gradient norm reduction: 1e-10
+    test: 'on'
+  - geometry:
+      nml_file: "./Data/480km/namelist.atmosphere_2018041500_regional"
+      streams_file: "./Data/480km/streams.atmosphere_regional"
+      deallocate non-da fields: true
+    ninner: '10'
+    gradient norm reduction: 1e-10
+    test: 'on'

@@ -29,7 +29,6 @@ use ufo_vars_mod
 
 !MPAS-Model
 use mpas_abort, only: mpas_dmpar_global_abort
-use mpas_constants
 use mpas_derived_types
 use mpas_dmpar
 use mpas_field_routines
@@ -83,17 +82,16 @@ contains
 
       character (len=*), intent(in) :: fieldName
       logical :: field_is_scalar
-      field_is_scalar = any(trim(fieldName) == &
-                    !(/'qv', 'qc', 'qi', 'qr', 'qs', 'qg', 'qh', 'nc', 'ni', 'nr', 'ns', 'ng', 'nh'/))
-                    (/'qv       ', 'qc       ', 'qi       ', 'qr       ', &
-                      'qs       ', 'qg       ', 'qh       ', &
-                      'nc       ', 'ni       ', 'nr       ', 'ns       ', &
-                      'ng       ', 'nh       ', &
-                      'qbcphobic', 'qbcphilic', 'qocphobic', 'qocphilic', &
-                      'qbrphobic', 'qbrphilic', &
-                      'qdust1   ', 'qdust2   ', 'qdust3   ', 'qdust4   ', 'qdust5   ', &
-                      'qseas1   ', 'qseas2   ', 'qseas3   ', 'qseas4   ', 'qseas5   ', &
-                      'qso4     ', 'qni1     ', 'qni2     ', 'qni3     '/))
+      character (len=*), parameter :: scalar_names(*) = &
+                    [character(len=12) :: 'qv', 'qc', 'qi', 'qr', 'qs', 'qg', 'qh', &
+                                          'nc', 'ni', 'nr', 'ns', 'ng', 'nh', &
+                                          'smoke_fine', &
+                                          'qbcphobic', 'qbcphilic', 'qocphobic', 'qocphilic', &
+                                          'qbrphobic', 'qbrphilic', &
+                                          'qdust1', 'qdust2', 'qdust3', 'qdust4', 'qdust5', &
+                                          'qseas1', 'qseas2', 'qseas3', 'qseas4', 'qseas5', &
+                                          'qso4', 'qni1', 'qni2', 'qni3']
+      field_is_scalar = any(trim(fieldName) == scalar_names)
 
    end function
 
