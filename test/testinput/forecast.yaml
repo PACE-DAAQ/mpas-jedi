@@ -1,5 +1,6 @@
 test:
   float relative tolerance: 0.005
+  float absolute tolerance: 1.0e-12
   integer tolerance: 0
   reference filename: testoutput/forecast.ref
   log output filename: testoutput/forecast.run
@@ -19,7 +20,7 @@ initial condition:
 forecast length: PT6H
 model:
   name: MPAS
-  tstep: PT45M
+  tstep: PT1H
   model variables:
   - air_temperature
   - water_vapor_mixing_ratio_wrt_moist_air
@@ -27,7 +28,7 @@ model:
   - northward_wind
   - air_pressure_at_surface
 output:
-  frequency: PT1H30M
+  frequency: PT3H
   filename: Data/states/mpas.forecast.$Y-$M-$D_$h.$m.$s.nc
   stream name: dastate
 prints:
